@@ -29,7 +29,23 @@ from fornecido.cronometro import cronometrar
 #: dígitos) e `resto` (o restante da linha, começando por um caractere que não é espaço).
 #: As partes são separadas por um ou mais espaços. A linha inteira deve casar: o padrão é
 #: aplicado com `LINHA.fullmatch(linha)`.
-LINHA: re.Pattern = None  # type: ignore[assignment]  # TODO issue #1
+LINHA: re.Pattern = re.compile(
+    r"""
+    ^                        # Início da linha
+    (?P<data>\d{4}-\d{2}-\d{2})  # Data no formato AAAA-MM-DD
+    \s+                      # Um ou mais espaços de separação
+    (?P<hora>\d{2}:\d{2}:\d{2})  # Hora no formato HH:MM:SS
+    \s+                      # Um ou mais espaços de separação
+    (?P<nivel>INFO|WARN|ALARME)  # Nível de log (INFO, WARN ou ALARME)
+    \s+                      # Um ou mais espaços de separação
+    (?P<tag>[A-Z]{1,2}\d{1,3})   # Tag: 1-2 letras maiúsculas + 1-3 dígitos
+    \s+                      # Um ou mais espaços de separação
+    (?P<resto>\S.*)          # Resto da linha, começando por um caractere não-espaço
+    $                        # Fim da linha
+    """,
+    re.VERBOSE,
+)
+
 
 
 @dataclass(frozen=True)
@@ -69,6 +85,26 @@ def ler_log(texto: str) -> tuple[list[Registro], list[str]]:
       (`contagens=1623` vira `1623.0`; `evento=partida` continua `"partida"`);
     - texto vazio devolve `([], [])`.
     """
+
+    retorno = ([],[])
+
+    # Removemos as linhas vazias ou com espaços
+    texto_limpo = re.sub(r"^[^\S\r\n]*\r?\n", "", texto, flags=re.MULTILINE)
+
+    for linha in texto_limpo.splitlines():
+        match = LINHA.fullmatch(linha)
+        if match:
+            linhas_validas.append(linha)
+            # Se precisar acessar os grupos nomeados da linha válida:
+            # dados = match.groupdict()
+            # print(dados['data'], dados['tag'], etc.)
+        else:
+            linhas_invalidas.append(linha)
+
+    print(texto_limpo)
+
+
+
     raise NotImplementedError("issue #1: ler_log")
 
 
